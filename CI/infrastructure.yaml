@@ -1,0 +1,103 @@
+resource_types:
+  - name: slack-notification
+    type: docker-image
+    source:
+      repository: cfcommunity/slack-notification-resource
+      tag: latest
+
+  - name: github-release-latest
+    type: docker-image
+    source:
+      repository: concourse/github-release-resource
+      tag: 1.2.0
+
+resources:
+
+##############################################################################
+# Git Repositories
+##############################################################################
+
+  - name: eq-infrastructure-docker-release
+    type: github-release-latest
+    source:
+      owner: ONSdigital
+      repository: eq-infrastructure-docker
+      tag_filter: ((infrastructure_version))
+      order_by: time
+      access_token: ((github.access_token))
+
+##############################################################################
+# Docker Images
+##############################################################################
+
+  - name: infrastructure-docker-image
+    type: docker-image
+    source:
+      repository: ((docker_registry))/eq-infrastructure-docker
+      username: _json_key
+      password: ((gcp.service_account_json))
+
+##############################################################################
+# Misc Resources
+##############################################################################
+
+  - name: slack-alert
+    type: slack-notification
+    source:
+      url: ((slack.webhook))
+
+jobs:
+
+##############################################################################
+# Build & Publish Infrastructure Images
+##############################################################################
+
+  - name: build-and-publish-infrastructure-image
+    plan:
+    - get: eq-infrastructure-docker-release
+      params:
+        include_source_tarball: true
+      trigger: true
+    - task: Build & Publish Infrastructure Image
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: alpine
+        inputs:
+          - name: eq-infrastructure-docker-release
+        outputs:
+          - name: extracted-eq-infrastructure-docker
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+              cd eq-infrastructure-docker-release
+              tar -xzf source.tar.gz -C ../extracted-eq-infrastructure-docker --strip-components=1
+    - put: infrastructure-docker-image
+      params:
+        build: extracted-eq-infrastructure-docker
+        tag: eq-infrastructure-docker-release/tag
+        tag_as_latest: true
+      get_params:
+        skip_download: true
+    on_failure:
+      put: slack-alert
+      params:
+        channel: '#((slack_channel_name))'
+        attachments:
+          - pretext: Infrastructure Image Build & Publish Failed
+            color: danger
+            title: Concourse Build $BUILD_ID
+            title_link: $ATC_EXTERNAL_URL/builds/$BUILD_ID
+    on_success:
+      put: slack-alert
+      params:
+        channel: '#((slack_channel_name))'
+        attachments:
+          - pretext: Infrastructure Image Build & Publish Passed
+            color: good
+            title: Concourse Build $BUILD_ID
+            title_link: $ATC_EXTERNAL_URL/builds/$BUILD_ID
