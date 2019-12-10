@@ -17,12 +17,11 @@ resources:
 # Git Repositories
 ##############################################################################
 
-  - name: eq-infrastructure-docker-release
+  - name: eq-infrastructure-build-image-release
     type: github-release-latest
     source:
       owner: ONSdigital
-      repository: eq-infrastructure-docker
-      tag_filter: ((infrastructure_version))
+      repository: eq-infrastructure-build-image
       order_by: time
       access_token: ((github.access_token))
 
@@ -33,7 +32,7 @@ resources:
   - name: infrastructure-docker-image
     type: docker-image
     source:
-      repository: ((docker_registry))/eq-infrastructure-docker
+      repository: ((docker_registry))/eq-infrastructure-build-image
       username: _json_key
       password: ((gcp.service_account_json))
 
@@ -54,7 +53,7 @@ jobs:
 
   - name: build-and-publish-infrastructure-image
     plan:
-    - get: eq-infrastructure-docker-release
+    - get: eq-infrastructure-build-image-release
       params:
         include_source_tarball: true
       trigger: true
@@ -66,20 +65,20 @@ jobs:
           source:
             repository: alpine
         inputs:
-          - name: eq-infrastructure-docker-release
+          - name: eq-infrastructure-build-image-release
         outputs:
-          - name: extracted-eq-infrastructure-docker
+          - name: extracted-eq-infrastructure-build-image
         run:
           path: sh
           args:
             - -exc
             - |
-              cd eq-infrastructure-docker-release
-              tar -xzf source.tar.gz -C ../extracted-eq-infrastructure-docker --strip-components=1
+              cd eq-infrastructure-build-image-release
+              tar -xzf source.tar.gz -C ../extracted-eq-infrastructure-build-image --strip-components=1
     - put: infrastructure-docker-image
       params:
-        build: extracted-eq-infrastructure-docker
-        tag: eq-infrastructure-docker-release/tag
+        build: extracted-eq-infrastructure-build-image
+        tag: eq-infrastructure-build-image-release/tag
         tag_as_latest: true
       get_params:
         skip_download: true
