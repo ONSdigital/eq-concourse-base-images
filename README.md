@@ -1,6 +1,6 @@
 # eQ Infrastructure Build Image
 
-This repo holds the Dockerfile used to build the infrastructure base image.
+This repo holds the Dockerfile used to build the eq infrastructure base image.
 
 
 ## Docker
