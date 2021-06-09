@@ -6,7 +6,7 @@ RUN apt-get update && \
 	git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
 	ln -s /root/.tfenv/bin/* /usr/local/bin \
 	&& \
-	tfenv install 0.12.31 && tfenv install 0.14.11
+	tfenv install 0.12.31 && tfenv install 0.14.11 && tfenv install 1.0.0
 
 ENV TFENV_AUTO_INSTALL=false
 ENTRYPOINT ["/bin/bash"]
