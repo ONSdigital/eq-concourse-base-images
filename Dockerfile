@@ -1,29 +1,24 @@
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:alpine AS builder_cloud_sdk
 
-# Install gcloud auth plugin, kubectl and helm
-RUN apk --update --no-cache add curl
+FROM alpine:3.19 AS builder_terraform
+ENV TERRAFORM_VERSION=1.7.3
 
-FROM alpine:3.19 AS builder_tfenv
-
-# Install tfenv and terraform
-RUN apk add --no-cache bash git curl && \
-    git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
-	ln -s /root/.tfenv/bin/* /usr/local/bin && \
-	tfenv install 1.7.3
-
+# Install terraform
+RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+RUN unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+RUN mv terraform /usr/local/bin/terraform
 
 FROM alpine:3.19
 # Add gcloud to the path
 ENV PATH /google-cloud-sdk/bin:$PATH
 
 # Install dependencies
-RUN apk add --no-cache python3 bash jq
+RUN apk add --no-cache python3 bash jq git
 
 # Copy binaries from the builder
 COPY --from=builder_cloud_sdk google-cloud-sdk/lib /google-cloud-sdk/lib
 COPY --from=builder_cloud_sdk google-cloud-sdk/bin/gcloud google-cloud-sdk/bin/gcloud
-COPY --from=builder_tfenv /usr/local/bin/tfenv /usr/local/bin/tfenv
-COPY --from=builder_tfenv /usr/local/bin/terraform /usr/local/bin/terraform
+COPY --from=builder_terraform /usr/local/bin/terraform /usr/local/bin/terraform
 
 # Update gcloud config
 RUN gcloud config set core/disable_usage_reporting true && \
