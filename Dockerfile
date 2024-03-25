@@ -5,7 +5,7 @@ RUN apk --update --no-cache add curl
 
 FROM alpine:3.19 AS builder_tfenv
 
-# Install tfenv
+# Install tfenv and terraform
 RUN apk add --no-cache bash git curl && \
     git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
 	ln -s /root/.tfenv/bin/* /usr/local/bin && \
@@ -23,6 +23,7 @@ RUN apk add --no-cache python3 bash jq
 COPY --from=builder_cloud_sdk google-cloud-sdk/lib /google-cloud-sdk/lib
 COPY --from=builder_cloud_sdk google-cloud-sdk/bin/gcloud google-cloud-sdk/bin/gcloud
 COPY --from=builder_tfenv /usr/local/bin/tfenv /usr/local/bin/tfenv
+COPY --from=builder_tfenv /usr/local/bin/terraform /usr/local/bin/terraform
 
 # Update gcloud config
 RUN gcloud config set core/disable_usage_reporting true && \
