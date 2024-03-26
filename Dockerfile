@@ -7,6 +7,7 @@ RUN apk add --no-cache bash git && \
     git clone --depth=1 https://github.com/tfutils/tfenv.git /tfenv
 
 FROM alpine:3.19
+
 # Add gcloud and tfenv to the path
 ENV PATH /google-cloud-sdk/bin:$PATH
 ENV PATH /tfenv/bin:$PATH
