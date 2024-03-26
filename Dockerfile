@@ -3,7 +3,7 @@ FROM gcr.io/google.com/cloudsdktool/cloud-sdk:alpine AS builder_cloud_sdk
 FROM alpine:3.19 AS builder_tfenv
 
 # Install tfenv
-RUN apk add --no-cache bash git curl && \
+RUN apk add --no-cache bash git && \
     git clone --depth=1 https://github.com/tfutils/tfenv.git /tfenv
 
 FROM alpine:3.19
