@@ -12,7 +12,7 @@ ENV PATH /google-cloud-sdk/bin:$PATH
 ENV PATH /tfenv/bin:$PATH
 
 # Install dependencies
-RUN apk add --no-cache python3 bash jq curl
+RUN apk add --no-cache python3 bash jq curl git
 
 # Copy binaries from the builders
 COPY --from=builder_cloud_sdk google-cloud-sdk/lib /google-cloud-sdk/lib
