@@ -1,29 +1,29 @@
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:alpine AS builder_cloud_sdk
 
-FROM alpine:3.19 AS builder_terraform
-ENV TERRAFORM_VERSION=1.7.3
+FROM alpine:3.19 AS builder_tfenv
 
-# Install terraform
-RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-RUN unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-RUN mv terraform /usr/local/bin/terraform
+# Install tfenv
+RUN apk add --no-cache bash git curl && \
+    git clone --depth=1 https://github.com/tfutils/tfenv.git /tfenv
 
 FROM alpine:3.19
-# Add gcloud to the path
+# Add gcloud and tfenv to the path
 ENV PATH /google-cloud-sdk/bin:$PATH
+ENV PATH /tfenv/bin:$PATH
 
 # Install dependencies
-RUN apk add --no-cache python3 bash jq git
+RUN apk add --no-cache python3 bash jq curl
 
-# Copy binaries from the builder
+# Copy binaries from the builders
 COPY --from=builder_cloud_sdk google-cloud-sdk/lib /google-cloud-sdk/lib
 COPY --from=builder_cloud_sdk google-cloud-sdk/bin/gcloud google-cloud-sdk/bin/gcloud
-COPY --from=builder_terraform /usr/local/bin/terraform /usr/local/bin/terraform
+COPY --from=builder_tfenv /tfenv /tfenv
 
-# Update gcloud config
+# Update gcloud config and install terraform version
 RUN gcloud config set core/disable_usage_reporting true && \
     gcloud config set component_manager/disable_update_check true && \
-    gcloud config set metrics/environment github_docker_image
+    gcloud config set metrics/environment github_docker_image && \
+    tfenv install 1.7.3
 
 # Set the default configuration directory
 VOLUME ["/root/.config"]
