@@ -1,12 +1,30 @@
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:alpine AS builder_cloud_sdk
 
-RUN apt-get update && \
-	apt-get -y install unzip kubectl \
-	&& \
-	git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
-	ln -s /root/.tfenv/bin/* /usr/local/bin \
-	&& \
-	tfenv install 1.3.7 && tfenv install 1.7.3
+FROM alpine:3.19 AS builder_tfenv
 
-ENV TFENV_AUTO_INSTALL=false
-ENTRYPOINT ["/bin/bash"]
+# Install tfenv
+RUN apk add --no-cache bash git && \
+    git clone --depth=1 https://github.com/tfutils/tfenv.git /tfenv
+
+FROM alpine:3.19
+
+# Add gcloud and tfenv to the path
+ENV PATH /google-cloud-sdk/bin:$PATH
+ENV PATH /tfenv/bin:$PATH
+
+# Install dependencies
+RUN apk add --no-cache python3 bash jq curl git
+
+# Copy binaries from the builders
+COPY --from=builder_cloud_sdk google-cloud-sdk/lib /google-cloud-sdk/lib
+COPY --from=builder_cloud_sdk google-cloud-sdk/bin/gcloud google-cloud-sdk/bin/gcloud
+COPY --from=builder_tfenv /tfenv /tfenv
+
+# Update gcloud config and install terraform version
+RUN gcloud config set core/disable_usage_reporting true && \
+    gcloud config set component_manager/disable_update_check true && \
+    gcloud config set metrics/environment github_docker_image && \
+    tfenv install 1.7.3
+
+# Set the default configuration directory
+VOLUME ["/root/.config"]
